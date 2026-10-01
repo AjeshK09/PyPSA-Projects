@@ -1,22 +1,3 @@
-"""
-Validation / sensitivity study for the district-heating pipe SOS2 model
-defined in dh_pipe_model.py.
-
-Sweeps the heat demand over a range of values chosen to specifically probe:
-  * demand below the smallest diameter's capacity (DN50)
-  * demand exactly at a breakpoint (DN50, DN100, DN200 capacities)
-  * demand strictly between two neighbouring breakpoints (DN50-DN100 and
-    DN100-DN200) -> SOS2 should activate exactly those two adjacent weights
-  * demand above the largest diameter's capacity (DN200) -> infeasible
-  * zero demand -> pipe should not be built at all (built = 0)
-
-For every feasible case we check:
-  1. at most two lambda weights are non-zero, and if two, they are
-     *neighbours* in the declared order (DN50-DN100 or DN100-DN200),
-  2. the Link's optimised capacity (p_nom_opt) equals the SOS2-interpolated
-     capacity and is sufficient to carry the demand,
-  3. the realised flow through the link equals the demand.
-"""
 
 from __future__ import annotations
 
@@ -49,7 +30,8 @@ def run_sensitivity(demands: list[float]) -> pd.DataFrame:
     rows = []
     for d in demands:
         res = solve_scenario(d)
-        row = {"demand_MW": d, "status": res["status"], "condition": res["condition"]}
+        row = {"demand_MW": d,
+               "status": res["status"], "condition": res["condition"]}
         if res.get("feasible", False):
             ok_adj, desc_adj = check_sos2_adjacency(res["lambda"])
             cap = res["link_p_nom_opt_MW"]
@@ -120,7 +102,8 @@ if __name__ == "__main__":
         built_expected = 0.0 if r["demand_MW"] == 0.0 else 1.0
         built_ok = abs(r["built"] - built_expected) < 1e-6
 
-        status = "OK" if (adj_ok and cov_ok and flow_ok and built_ok) else "FAIL"
+        status = "OK" if (
+            adj_ok and cov_ok and flow_ok and built_ok) else "FAIL"
         print(
             f"demand={r['demand_MW']:7.3f} MW : {status:4s} | "
             f"SOS2 adjacency: {r['sos2_note']:38s} | "
